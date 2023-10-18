@@ -30,7 +30,8 @@ resource "aws_s3_bucket_ownership_controls" "example" {
 resource "aws_s3_bucket_public_access_block" "example" {
   bucket = aws_s3_bucket.frontend.id
 
-  restrict_public_buckets = true
+  block_public_acls       = false
+  restrict_public_buckets = false
 }
 
 resource "aws_s3_object" "file" {
