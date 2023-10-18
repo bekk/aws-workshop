@@ -68,7 +68,7 @@ TODO: Run `terraform apply` and verify outputs are correct.
 
 ## Frontend
 
-We will use object storage to host our web site. The S3 resource in AWS can host file shares, queues, blobs and tables. Objects are organized into "Buckets". Each bucket can contain many Objects. An object can be a text file (HTML, javascript, txt), an image, a video or any other file. 
+We will use object storage to host our web site. The S3 resource in AWS can store virtually any kind of data (objects). Objects are organized into "Buckets". Each bucket can contain many Objects. An object can be a text file (HTML, javascript, txt), an image, a video or any other file. 
 
 When serving a static web site from an S3 Bucket, we will need to enable the "Static Website" feature and allow for public access. We will also use terraform to upload the files in the `frontend_dist/` folder.
 
