@@ -20,7 +20,7 @@ On macOS, with `brew`, you can run `brew install awscli terraform`.
 
 ### Authenticating in the browser
 
-You will receive access to Azure by using your company email address. However, you'll need to reset the password before first login.
+You will receive access to AWS by using your company email address. However, you'll need to reset the password before first login.
 
 1. Go to [https://bekk-cloudlabs.awsapps.com/start/](https://bekk-cloudlabs.awsapps.com/start/).
 
