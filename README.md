@@ -82,27 +82,19 @@ We use a CDN (Cloudfront) in front of the storage account to provide a custom do
     }
     ```
 
-This provisions up a S3 bucket that can store anything. For this to serve a static site, we need to enable static site hosting and public access to the objects in the bucket:
+This provisions up a S3 bucket that can store anything. For us to add our frontend files to the bucket, we need to enable public object creation in the bucket and allow all accounts to upload objects.
 
     ```terraform
-    resource "aws_s3_bucket_website_configuration" "frontend" {
-        bucket = aws_s3_bucket.frontend.id
-        index_document {
-            suffix = "index.html"
-        }
-    }
-
-    resource "aws_s3_bucket_ownership_controls" "example" {
+    resource "aws_s3_bucket_ownership_controls" "frontend" {
         bucket = aws_s3_bucket.frontend.id
         rule {
-            object_ownership = "BucketOwnerPreferred"
+            object_ownership = "ObjectWriter"
         }
     }
 
-    resource "aws_s3_bucket_public_access_block" "example" {
+    resource "aws_s3_bucket_public_access_block" "frontend" {
         bucket = aws_s3_bucket.frontend.id
         block_public_acls       = false
-        restrict_public_buckets = false
     }
     ```
 
@@ -143,11 +135,28 @@ This provisions up a S3 bucket that can store anything. For this to serve a stat
 
     After `terraform apply` is done, navigate to the S3 Resource in the AWS Console, find "Buckets" in the sidebar and select the bucket with your id. Verify that you see your files there.
 
+    Now that the files are uploaded to the bucket, you can disable public access. Remove the `aws_s3_bucket_ownership_controls` and `aws_s3_bucket_public_access_block` resources.
+
+4. Now we need to enable static site hosting in the bucket. Add this to `frontend.tf`:
+
+    ```terraform
+     resource "aws_s3_bucket_website_configuration" "frontend" {
+        bucket = aws_s3_bucket.frontend.id
+        index_document {
+            suffix = "index.html"
+        }
+    }
+    ```
+
     Navigate to "Properties" in the header, and find the endpoint at the bottom of the page. Copy it into a new tab in the browser, and verify that you get the "k6 demo todo frontend". Ignore the network error for now, that won't work before we've set up DNS properly.
 
 4. We'll do the CDN configuration in one go:
 
     ```terraform
+    data "aws_cloudfront_cache_policy" "frontend" {
+        name = "Managed-CachingDisabled"
+    }
+    
     resource "aws_cloudfront_distribution" "distribution" {
         enabled         = true
         is_ipv6_enabled = true
@@ -157,11 +166,9 @@ This provisions up a S3 bucket that can store anything. For this to serve a stat
             origin_id   = aws_s3_bucket.frontend.bucket_regional_domain_name
 
             custom_origin_config {
-                http_port                = 80
-                https_port               = 443
-                origin_keepalive_timeout = 5
-                origin_protocol_policy   = "http-only"
-                origin_read_timeout      = 30
+                http_port              = 80
+                https_port             = 443
+                origin_protocol_policy = "http-only"
                 origin_ssl_protocols = [
                     "TLSv1.2",
                 ]
@@ -174,16 +181,15 @@ This provisions up a S3 bucket that can store anything. For this to serve a stat
 
         restrictions {
             geo_restriction {
-            restriction_type = "none"
-            locations        = []
+                restriction_type = "none"
+                locations        = []
             }
         }
 
         default_cache_behavior {
             cache_policy_id        = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
             viewer_protocol_policy = "redirect-to-https"
-            compress               = true
-            allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+            allowed_methods        = ["GET", "HEAD"]
             cached_methods         = ["GET", "HEAD"]
             target_origin_id       = aws_s3_bucket.frontend.bucket_regional_domain_name
         }

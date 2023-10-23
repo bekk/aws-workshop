@@ -1,3 +1,3 @@
 locals {
-  id = "omlieaws"
+  id = "-navn-aws"
 }

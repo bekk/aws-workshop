@@ -12,29 +12,20 @@ resource "aws_s3_bucket" "frontend" {
   bucket = "s3-bucket-${local.id}"
 }
 
-resource "aws_s3_bucket_website_configuration" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+# resource "aws_s3_bucket_ownership_controls" "frontend" {
+#   bucket = aws_s3_bucket.frontend.id
+#   rule {
+#     object_ownership = "BucketOwnerPreferred"
+#   }
+# }
 
-  index_document {
-    suffix = "index.html"
-  }
-}
+# resource "aws_s3_bucket_public_access_block" "frontend" {
+#   bucket = aws_s3_bucket.frontend.id
 
-resource "aws_s3_bucket_ownership_controls" "example" {
-  bucket = aws_s3_bucket.frontend.id
-  rule {
-    object_ownership = "BucketOwnerPreferred"
-  }
-}
+#   block_public_acls = false
+# }
 
-resource "aws_s3_bucket_public_access_block" "example" {
-  bucket = aws_s3_bucket.frontend.id
-
-  block_public_acls       = false
-  restrict_public_buckets = false
-}
-
-resource "aws_s3_object" "file" {
+resource "aws_s3_object" "frontend" {
   for_each = local.frontend_files
 
   bucket       = aws_s3_bucket.frontend.id
@@ -45,8 +36,19 @@ resource "aws_s3_object" "file" {
   acl          = "public-read"
 }
 
+resource "aws_s3_bucket_website_configuration" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
 
-resource "aws_cloudfront_distribution" "distribution" {
+  index_document {
+    suffix = "index.html"
+  }
+}
+
+data "aws_cloudfront_cache_policy" "frontend" {
+  name = "Managed-CachingDisabled"
+}
+
+resource "aws_cloudfront_distribution" "frontend" {
   enabled         = true
   is_ipv6_enabled = true
 
@@ -55,11 +57,9 @@ resource "aws_cloudfront_distribution" "distribution" {
     origin_id   = aws_s3_bucket.frontend.bucket_regional_domain_name
 
     custom_origin_config {
-      http_port                = 80
-      https_port               = 443
-      origin_keepalive_timeout = 5
-      origin_protocol_policy   = "http-only"
-      origin_read_timeout      = 30
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
       origin_ssl_protocols = [
         "TLSv1.2",
       ]
@@ -78,10 +78,9 @@ resource "aws_cloudfront_distribution" "distribution" {
   }
 
   default_cache_behavior {
-    cache_policy_id        = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    cache_policy_id        = data.aws_cloudfront_cache_policy.frontend.id
     viewer_protocol_policy = "redirect-to-https"
-    compress               = true
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
     target_origin_id       = aws_s3_bucket.frontend.bucket_regional_domain_name
   }
@@ -89,7 +88,7 @@ resource "aws_cloudfront_distribution" "distribution" {
 
 output "website_url" {
   description = "Website URL (HTTPS)"
-  value       = aws_cloudfront_distribution.distribution.domain_name
+  value       = aws_cloudfront_distribution.frontend.domain_name
 }
 
 output "s3_url" {
