@@ -12,18 +12,18 @@ resource "aws_s3_bucket" "frontend" {
   bucket = "s3-bucket-${local.id}"
 }
 
-# resource "aws_s3_bucket_ownership_controls" "frontend" {
-#   bucket = aws_s3_bucket.frontend.id
-#   rule {
-#     object_ownership = "BucketOwnerPreferred"
-#   }
-# }
+resource "aws_s3_bucket_ownership_controls" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
 
-# resource "aws_s3_bucket_public_access_block" "frontend" {
-#   bucket = aws_s3_bucket.frontend.id
+resource "aws_s3_bucket_public_access_block" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
 
-#   block_public_acls = false
-# }
+  block_public_acls = false
+}
 
 resource "aws_s3_object" "frontend" {
   for_each = local.frontend_files
