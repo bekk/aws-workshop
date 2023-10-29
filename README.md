@@ -65,6 +65,48 @@ Access is set up using AWS Identity Center, and we'll use the single sign-on (SS
 
 TODO: Run `terraform apply` and verify outputs are correct.
 
+## Backend
+
+The backend is a pre-built Docker image uploaded in the Elastic Container Registry (ECR). We'll run it using AWS App Runner which pulls the image and runs it as a container.
+
+AWS App Runner is a fully managed application service that lets you build, deploy, and run web applications and API services without managing the underlying hardware. You can choose between building from source code or using an uploaded image from ECR, which is what we will do in this workshop (No other container registries are currently supported).
+
+1. Create a new file, `backend.tf`.
+
+2. We'll create a new resource of type `aws_apprunner_service`, named `ar-todo-<yourid42>`.  Like this:
+
+   ```terraform
+   resource "aws_apprunner_service" "todo" {
+     service_name = "ar-todo-${local.id}"
+   
+     source_configuration {
+       image_repository {
+         image_configuration {
+           port = "8000"
+           runtime_environment_variables = {
+             DATABASE_URL = "postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
+           }
+         }
+         image_identifier      = "public.ecr.aws/m1p3r7y5/bekk-cloudlabs:latest"
+         image_repository_type = "ECR_PUBLIC"
+       }
+       auto_deployments_enabled = false
+     }
+   }
+   ```
+
+   Note that the terraform local name (here: `todo`) does not need to be the same as the AWS service name `ar-todo-<yourid42>`.
+
+
+
+3. Run `terraform apply`. By doing this the App Runner resource will be created and pull the image specified in the `image_identifier`. If `auto_deployments_enabled` is set to true App Runner will automatically deploy a new version when the image is updated. As we are not going to do code changes in the backend in this workshop, the auto-deployment is not necessary and is set to false.
+4. Verify that the App Runner resource is created correctly in the AWS console (This may take several minutes). You might see that the App Runner resource appears in the AWS console for some time before the application is fully deployed and ready to use. 
+
+### TODO Backend
+Forklare hvordan man kan verifisere at App Runner er satt opp korrekt. Dette kommer an på om database er satt opp før eller etter backend-oppgaven. Det vil feile i kjøringen frem til DATABASE_URL er satt til noe fornuftig som fungerer med databasen. Om databasen er satt opp på forhånd bør hva DATABASE_URL-en er forklares i oppsettet her også.
+
+Bytte ut id-en i navnet i koden med den faktiske id-en som jeg tror Omlie la til i frontend-branchen (dropper å legge til her også for å unngå konflikt)
+
 
 ## Frontend
 
