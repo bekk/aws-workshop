@@ -1,0 +1,3 @@
+locals {
+  id = "-navn-aws"
+}
