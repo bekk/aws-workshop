@@ -18,6 +18,22 @@ provider "aws" {
   allowed_account_ids = ["893160086441"]
 }
 
+provider "aws" {
+  alias = "ws-dns"
+  # Must correspond to the AWS CLI configured profile name
+  profile             = "cloudlabs-dns"
+  region              = "eu-west-1"
+  allowed_account_ids = ["325039187874"]
+}
+
+provider "aws" {
+  alias = "ws-acm"
+  # Must correspond to the AWS CLI configured profile name
+  profile             = "cloudlabs-acm"
+  region              = "us-east-1"
+  allowed_account_ids = ["893160086441"]
+}
+
 data "aws_vpc" "default" {
   default = true
 }

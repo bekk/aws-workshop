@@ -71,8 +71,12 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
+  aliases = ["${local.id}.${data.aws_route53_zone.cloudlabs-aws-no.name}"]
+
   viewer_certificate {
-    cloudfront_default_certificate = true
+    //cloudfront_default_certificate = true
+    acm_certificate_arn = aws_acm_certificate_validation.frontend.certificate_arn
+    ssl_support_method  = "sni-only"
   }
 
   restrictions {
@@ -101,3 +105,51 @@ output "s3_url" {
   value       = aws_s3_bucket_website_configuration.frontend.website_endpoint
 }
 
+# Create domain name
+data "aws_route53_zone" "cloudlabs-aws-no" {
+  provider = aws.ws-dns
+
+  name = "cloudlabs-aws.no."
+}
+
+resource "aws_route53_record" "frontend" {
+  provider = aws.ws-dns
+
+  zone_id = data.aws_route53_zone.cloudlabs-aws-no.zone_id
+  name    = "${local.id}.${data.aws_route53_zone.cloudlabs-aws-no.name}"
+  type    = "A"
+  alias {
+    name                   = aws_cloudfront_distribution.frontend.domain_name
+    zone_id                = aws_cloudfront_distribution.frontend.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_acm_certificate" "frontend" {
+  provider          = aws.ws-acm
+  domain_name       = "${local.id}.${data.aws_route53_zone.cloudlabs-aws-no.name}"
+  validation_method = "DNS"
+}
+
+resource "aws_route53_record" "frontend-validation" {
+  provider = aws.ws-dns
+  zone_id  = data.aws_route53_zone.cloudlabs-aws-no.zone_id
+  name     = one(aws_acm_certificate.frontend.domain_validation_options).resource_record_name
+  type     = one(aws_acm_certificate.frontend.domain_validation_options).resource_record_type
+  records  = [one(aws_acm_certificate.frontend.domain_validation_options).resource_record_value]
+  ttl      = 60
+}
+
+resource "aws_acm_certificate_validation" "frontend" {
+  provider                = aws.ws-acm
+  certificate_arn         = aws_acm_certificate.frontend.arn
+  validation_record_fqdns = [aws_route53_record.frontend-validation.fqdn]
+}
+
+output "certificate_arn" {
+  value = aws_acm_certificate.frontend.arn
+}
+
+output "certificate_validation_arn" {
+  value = aws_acm_certificate_validation.frontend.certificate_arn
+}
