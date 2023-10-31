@@ -63,7 +63,121 @@ Access is set up using AWS Identity Center, and we'll use the single sign-on (SS
 
 ## Terraform
 
-TODO: Run `terraform apply` and verify outputs are correct.
+This repository has two folders for this workshop: `frontend_dist/` contains some pre-built frontend files that we'll upload and `infra/` will contain our terraform code. All files should be created here, and all terraform commands assume you're in this folder, unless something else is explicitly specified.
+
+The `infra/` folder, does not contain many files yet:
+
+* `terraform.tf` contains *provider* configuration. A provider is a plugin or library used by the terraform core to provide functionality. The `azurerm` we will use in this workshop provides the definition of Azure resources and translates to correct API requests when you apply your configuration.
+
+Let's move on to running some actual commands 🚀
+
+1. Before you can provision infrastructure, you have to initialize the providers from `terraform.tf`. You can do this by running `terraform init` (from the `infra/` folder!).
+
+    This command will not do any infrastructure changes, but will create a `.terraform/` folder, a `.terraform.lock.hcl` lock file. The lock file can (and should) be committed. :warning: The `.terraform/` folder should not be committed, because it can contain secrets.
+
+2. Create a `main.tf` file (in `infra/`) and add the following code, replacing `<yourid42>` with a random string containing only lowercase letters and numbers, no longer than 8 characters. The `id` is used to create unique resource names and subdomains, so ideally at least 6 characters should be used to avoid collisions.
+
+    ```terraform
+    locals {
+      id = "<yourid42>"
+    }
+    ```
+
+3. Take a look at at `terraform.tf`. 
+    
+    * The file declares some `data` blocks:
+        * A `aws_vpc` block for the default VPC (Virtual Private Cloud) provisioned in every new AWS Account, which can be used to isolate resources in a virtual network.
+        * A `aws_caller_identity` which contains information about the AWS identity used for running terraform, which we use in `output` blocks :point_down:
+    * `output` blocks:
+        * `user_arn`, which contains the [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html) (Amazon Resource Name) of your user. ARNs are unambiguous across all of AWS.
+        * `user_id` which is an IAM-specific (Identity and Access Management) [unique id](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
+    * `check` block:
+        * `checks` are a [part of the Terraform language](https://developer.hashicorp.com/terraform/tutorials/configuration-language/checks) to validate infrastructure, and will output warnings if the `assert` fail. In this case, it verifies that you've set the `id` correctly in the previous step.
+
+4. Run `terraform apply`. Confirm that you don't get a warning from the `check`, and take a look at the `user_arn` and `user_id` outputs.
+
+## Database
+
+We'll create a PostgreSQL database for our application. Amazon RDS can be used for MySQL, SQL Server, PostgresSQL and more. We'll simplify a little bit here, and create an AWS security group, with an ingress rule that allows traffic from the public internet. This is a *bad* idea for production databases.
+
+1. First, we'll need to create a random password for our admin user. To generate the password, we'll generate a random string. Add the [Random provider](https://registry.terraform.io/providers/hashicorp/random/latest/docs) to the `required_providers` block in `terraform.tf`, followed by `terraform init` to initialize the provider.
+
+    ```terraform
+    random = {
+      source = "hashicorp/random"
+      version = "3.5.1"
+    }
+    ```
+
+    Now, we can create a `random_password` resource to generate our password. Add the following code to `database.tf`:
+
+    ```terraform
+    resource "random_password" "postgres_password" {
+      length  = 24
+      special = false
+    }
+    ```
+
+    This will create a random, 24-character password, which by default will contain uppercase, lowercase and numbers. We can reference the password by using the `result` attribute: `random_password.sql_server_admin_password.result`. This password will be stored in the terraform state file, and will not be regenerated every time `terraform apply` is run.
+
+2.  We'll continue with the security group:
+
+    ```terraform
+    resource "aws_security_group" "db-allow-all" {
+      name   = "security-group-todo-public-${local.id}"
+      vpc_id = data.aws_vpc.default.id
+    }
+
+    resource "aws_vpc_security_group_ingress_rule" "db-allow-all" {
+      security_group_id = aws_security_group.db-allow-all.id
+      cidr_ipv4         = "0.0.0.0/0"
+      from_port         = 5432
+      to_port           = 5432
+      ip_protocol       = "tcp"
+    }
+    ```
+
+    This creates a security group, `security-group-todo-public-<yourid42>`, to the default VPC. Then an *ingress rule*, opening up for inbound traffic, is created for the security group. The inbound rule opens up TCP traffic from everywhere (`0.0.0.0/0`), on ports in the  `from_port` - `to_port`, in this case, only `5432`, the the default PostgreSQL port.
+
+3. We'll continue by adding the actual database:
+
+    ```terraform
+    resource "aws_db_instance" "todo" {
+      # The name of the instance
+      identifier = "db-todo-${local.id}"
+      # The name of the database
+      db_name = "todo"
+
+      # Credentials
+      username = "todoadmin"
+      password = random_password.postgres_password.result
+
+      # Tier and scale configuration
+      allocated_storage = 10
+      instance_class    = "db.t3.micro"
+
+      # Database type & version
+      engine         = "postgres"
+      engine_version = "15.3"
+
+      # Make database accessible from the internet
+      publicly_accessible    = true
+      vpc_security_group_ids = [aws_security_group.db-allow-all.id]
+
+      # Necessary to easily destroy after workshop, we don't want a backup snapshot when destroying
+      skip_final_snapshot = true
+    }
+    ```
+
+4. Add an `output` block to get the database host:
+
+    ```terraform
+    output "db_host" {
+      value = aws_db_instance.todo.endpoint
+    }
+    ```
+
+5. Run `terraform apply` and verify that everything works as intended. Go to the AWS console, and find the newly created resources. You should be able to find the security group, the database, and the setting that connects the security group to the database (on the RDS instance).
 
 ## Backend
 
