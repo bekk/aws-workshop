@@ -32,34 +32,36 @@ You will receive access to AWS by using your company email address. However, you
 
 ### Authenticating in the terminal
 
-Access is set up using AWS Identity Center, and we'll use the single sign-on (SSO) way of authenticating, by running an interactive command to configure the environment.
+# TODO, redo with sessions
+Access is set up using AWS Identity Center, and we'll use the single sign-on (SSO) way of authenticating, by running an interactive command to configure the environment. First we'll set up a SSO session, and then associate different AWS accounts with different profiles.
 
-1. Run `aws configure sso` and insert the following values in the interactive prompts (some inputs are empty, where we use the defaults):
+1. Run `aws configure sso-session`, and insert the following values:
 
     ```
-    SSO session name (Recommended): cloud-labs-ws
+    SSO session name: cloudlabs-common
     SSO start URL [None]: https://bekk-cloudlabs.awsapps.com/start
     SSO region [None]: eu-west-1
     SSO registration scopes [sso:account:access]:
     ```
 
-2. A browser will open. Read the instructions in the terminal, and verify that the code is the same. After you've completed in the browser, you should see this output in the terminal:
+2. Run `aws sso login --sso-session cloudlabs-common`. A browser will open. Read the instructions in the terminal, and verify that the code is the same.
+
+3. Now, we'll configure a *profile* that connects your session to a given AWS account. Run `aws configure sso --profile cloudlabs`:
 
     ```
-    There are 2 AWS accounts available to you.
+    SSO session name (Recommended): cloudlabs-common
+    There are 3 AWS accounts available to you.
     Using the account ID 893160086441
     The only role available to you is: ManagedAdministratorAccess
     Using the role name "ManagedAdministratorAccess"
-    ```
-
-3. Then there's two more interactive inputs:
-
-    ```
     CLI default client Region [None]: eu-west-1
     CLI default output format [None]:
     ```
 
-4. We can use the CLI to call the Security Token Service (STS) and retrieve information about the current user. Run: `aws sts get-caller-identity --profile ManagedAdministratorAccess-893160086441`. You should get `UserId`, `Account` and `Arn` in the output.
+    This will setup a `cloudlabs` profile, using the `cloudlabs-common` session. Later, we'll add additional profiles using the same session.
+
+
+4. We can use the CLI to call the Security Token Service (STS) and retrieve information about the current user. Run: `aws sts get-caller-identity --profile profile`. You should get `UserId`, `Account` and `Arn` in the output.
 
 ## Terraform
 
