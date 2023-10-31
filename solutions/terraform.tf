@@ -5,7 +5,7 @@ terraform {
       version = "5.20.1"
     }
     random = {
-      source = "hashicorp/random"
+      source  = "hashicorp/random"
       version = "3.5.1"
     }
   }
@@ -13,7 +13,7 @@ terraform {
 
 provider "aws" {
   # Must correspond to the AWS CLI configured profile name
-  profile             = "ManagedAdministratorAccess-893160086441"
+  profile             = "cloudlabs"
   region              = "eu-west-1"
   allowed_account_ids = ["893160086441"]
 }
@@ -30,4 +30,13 @@ output "user_arn" {
 
 output "user_id" {
   value = data.aws_caller_identity.current.user_id
+}
+
+# This check will display a warning to the participants if they forget to set
+# the id local variable in main.tf
+check "id_is_set" {
+  assert {
+    error_message = "Id must be set in main.tf"
+    condition     = length(local.id) > 0
+  }
 }

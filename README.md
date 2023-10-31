@@ -241,7 +241,7 @@ We use a CDN (Cloudfront) in front of the storage account to provide a custom do
     }
     ```
 
-This provisions up a S3 bucket that can store anything. For us to add our frontend files to the bucket, we need to enable public object creation in the bucket and allow all accounts to upload objects.
+    This provisions up a S3 bucket that can store anything. For us to add our frontend files to the bucket, we need to enable public object creation in the bucket and allow all accounts to upload objects.
 
     ```terraform
     resource "aws_s3_bucket_ownership_controls" "frontend" {

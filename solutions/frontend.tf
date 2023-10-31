@@ -33,7 +33,12 @@ resource "aws_s3_object" "frontend" {
   source       = "${local.frontend_dir}/${each.value}"
   content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.value), null)
   etag         = filemd5("${local.frontend_dir}/${each.value}")
-  acl          = "public-read"
+
+  acl = "public-read"
+
+  # We can only provision objects with ACL after they are enabled on the bucket,
+  # but there is still some eventual consistency, so it might still fail
+  depends_on = [aws_s3_bucket_public_access_block.frontend]
 }
 
 resource "aws_s3_bucket_website_configuration" "frontend" {
