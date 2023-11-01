@@ -60,7 +60,7 @@ Access is set up using AWS Identity Center, and we'll use the single sign-on (SS
     This will setup a `cloudlabs` profile, using the `cloudlabs-common` session. Later, we'll add additional profiles using the same session.
 
 
-4. We can use the CLI to call the Security Token Service (STS) and retrieve information about the current user. Run: `aws sts get-caller-identity --profile profile`. You should get `UserId`, `Account` and `Arn` in the output.
+4. We can use the CLI to call the Security Token Service (STS) and retrieve information about the current user. Run: `aws sts get-caller-identity --profile cloudlabs`. You should get `UserId`, `Account` and `Arn` in the output.
 
 ## Terraform
 
@@ -283,7 +283,12 @@ We use a CDN (Cloudfront) in front of the storage account to provide a custom do
         source       = "${local.frontend_dir}/${each.value}"
         content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.value), null)
         etag         = filemd5("${local.frontend_dir}/${each.value}")
+
         acl          = "public-read"
+
+        # We can only provision objects with ACL after they are enabled on the bucket,
+        # but there is still some eventual consistency, so it might still fail
+        depends_on = [aws_s3_bucket_public_access_block.frontend]
     }
     ```
 
