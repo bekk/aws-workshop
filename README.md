@@ -32,7 +32,6 @@ You will receive access to AWS by using your company email address. However, you
 
 ### Authenticating in the terminal
 
-# TODO, redo with sessions
 Access is set up using AWS Identity Center, and we'll use the single sign-on (SSO) way of authenticating, by running an interactive command to configure the environment. First we'll set up a SSO session, and then associate different AWS accounts with different profiles.
 
 1. Run `aws configure sso-session`, and insert the following values:
