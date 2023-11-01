@@ -363,3 +363,72 @@ We use a CDN (Cloudfront) in front of the storage account to provide a custom do
     This puts our website behind a CDN and also redirects all traffic to HTTPS.
 
 5. Run `terraform apply`. This may take a while. When this is done, navigate to the Cloudfront resource in AWS and locate your distribution. Find your distribution domain name (`<something>.cloudfront.net`) in the details of the distribution, and copy it in a new tab to verify that the CDN serves the frontend correctly.
+
+## Backend DNS
+
+Lets setup some DNS for our App Runner instance. DNS is managed by Route53. For this to work, we'll create an `aws_apprunner_custom_domain_associaton` terraform resource. This resource will configure the App Runner instance. In addtion, we need to create an `aws_route53_record` for a CNAME record. There are also mechanisms for validating DNS records that we will need to implement, where we will create some special DNS records requested by the App Runner instance.
+
+The Route 53 hosted zone for `cloudlabs-aws.no` is managed in a separate account.
+
+1. Go to [https://bekk-cloudlabs.awsapps.com/start#/](https://bekk-cloudlabs.awsapps.com/start#/) and choose "Bekk Cloud Labs admin", then "ManageDNSRecords" management console, you will get into the account managing Route 53. You can search for "Route 53" and find the hosted zone.
+
+2. We want to provision records in this hosted zone with terraform, so we'll create a new profile in the CLI and use that to configure a separate AWS provider for this account. Similar to previous setup, run `aws configure sso --profile cloudlabs-dns`:
+
+    ```
+    SSO session name (Recommended): cloudlabs-common
+    There are 3 AWS accounts available to you.
+    Using the account ID 325039187874
+    The only role available to you is: ManageDNSRecords
+    Using the role name "ManageDNSRecords"
+    CLI default client Region [None]: eu-west-1
+    CLI default output format [None]:
+    ```
+
+    This will setup a `cloudlabs-dns` profile, using the `cloudlabs-common` session.
+
+3. Then, add a new `provider` block to `terraform.tf`, below the previous one:
+
+    ```terraform
+    provider "aws" {
+      alias = "ws-dns"
+      # Must correspond to the AWS CLI configured profile name
+      profile             = "cloudlabs-dns"
+      region              = "eu-west-1"
+      allowed_account_ids = ["325039187874"]
+    }
+    ```
+
+    This will create a new, separate provider configuration that we can refer to using the alias "ws-dns".
+
+4. We'll start by configuring App Runner and create first CNAME record:
+
+  ```terraform
+  # Create a new variable for the API URL
+  locals {
+    api_url = "api.${local.id}.${data.aws_route53_zone.cloudlabs-aws-no.name}"
+  }
+
+  # Configure App Runner with new DNS name
+  resource "aws_apprunner_custom_domain_association" "todo" {
+    domain_name          = local.api_url
+    service_arn          = aws_apprunner_service.todo.arn
+    # This is an API, so we don't need the www subdomain
+    enable_www_subdomain = false
+  }
+
+  # Setup the route53 record for App Runner
+  resource "aws_route53_record" "backend" {
+    # NB! Here we specify which provider we'll use
+    provider        = aws.ws-dns
+
+    allow_overwrite = true
+    name            = local.api_url
+    records         = [aws_apprunner_custom_domain_association.todo.dns_target]
+    ttl             = 60
+    type            = "CNAME"
+    zone_id         = data.aws_route53_zone.cloudlabs-aws-no.zone_id
+  }
+  ```
+
+
+
