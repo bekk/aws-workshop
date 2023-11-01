@@ -68,7 +68,7 @@ This repository has two folders for this workshop: `frontend_dist/` contains som
 
 The `infra/` folder, does not contain many files yet:
 
-* `terraform.tf` contains *provider* configuration. A provider is a plugin or library used by the terraform core to provide functionality. The `azurerm` we will use in this workshop provides the definition of Azure resources and translates to correct API requests when you apply your configuration.
+* `terraform.tf` contains *provider* configuration. A provider is a plugin or library used by the terraform core to provide functionality. The `aws` we will use in this workshop provides the definition of AWS resources and translates to correct API requests when you apply your configuration.
 
 Let's move on to running some actual commands 🚀
 
@@ -293,7 +293,8 @@ We use a CDN (Cloudfront) in front of the storage account to provide a custom do
 
     After `terraform apply` is done, navigate to the S3 Resource in the AWS Console, find "Buckets" in the sidebar and select the bucket with your id. Verify that you see your files there.
 
-    Now that the files are uploaded to the bucket, you can disable public access. Remove the `aws_s3_bucket_ownership_controls` and `aws_s3_bucket_public_access_block` resources.
+    <!-- TODO, confirm & create explanation
+    Now that the files are uploaded to the bucket, you can disable public access. Remove the `aws_s3_bucket_ownership_controls` and `aws_s3_bucket_public_access_block` resources. -->
 
 4. Now we need to enable static site hosting in the bucket. Add this to `frontend.tf`:
 
