@@ -236,7 +236,7 @@ We use a CDN (Cloudfront) in front of the storage account to provide a custom do
 
     ```terraform
     resource "aws_s3_bucket" "frontend" {
-        bucket = local.domain_name
+      bucket = "s3-bucket-${local.id}"
     }
     ```
 
