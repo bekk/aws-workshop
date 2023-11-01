@@ -45,6 +45,8 @@ Access is set up using AWS Identity Center, and we'll use the single sign-on (SS
 
 2. Run `aws sso login --sso-session cloudlabs-common`. A browser will open. Read the instructions in the terminal, and verify that the code is the same.
 
+  :bulb: If you're logged out during the workshop (typically a "No valid credential sources found" error), run the command again.
+
 3. Now, we'll configure a *profile* that connects your session to a given AWS account. Run `aws configure sso --profile cloudlabs`:
 
     ```
@@ -467,7 +469,74 @@ The Route 53 hosted zone for `cloudlabs-aws.no` is managed in a separate account
   }
   ```
 
-7. Run `terraform apply` and go check out your App Runner instance.
+7. Run `terraform apply` and go check out your App Runner instance. Find the certificate setup under the "Custom domains" tab. Also validate that `https://api.<yourid42>.cloublabs-aws.no/healthcheck` gives a postive response.
 
 
+## Frontend DNS
 
+Now, we'll do something similar for the frontend. This time, we'll have to create an A record, and also have to create our own certificate and do the validation differently. For the certificate to work with CloudFront, it must be created in the same account, but in the `us-east-1` region.
+
+1. Add a new provider for creating the certficiate, using the original profile (`cloudlabs`), but a different region:
+
+  ```terraform
+  provider "aws" {
+    alias = "ws-acm"
+    # Must correspond to the AWS CLI configured profile name
+    profile             = "cloudlabs"
+    region              = "us-east-1"
+    allowed_account_ids = ["893160086441"]
+  }
+  ```
+
+2. We'll start by creating the record and the certificate:
+
+  ```terraform
+  # The record that will point to the CloudFront distribution
+  resource "aws_route53_record" "frontend" {
+    provider = aws.ws-dns
+
+    zone_id = data.aws_route53_zone.cloudlabs-aws-no.zone_id
+    name    = "${local.id}.${data.aws_route53_zone.cloudlabs-aws-no.name}"
+    type    = "A"
+    alias {
+      name                   = aws_cloudfront_distribution.frontend.domain_name
+      zone_id                = aws_cloudfront_distribution.frontend.hosted_zone_id
+      evaluate_target_health = false
+    }
+  }
+
+  # The certificate
+  resource "aws_acm_certificate" "frontend" {
+    provider          = aws.ws-acm
+    domain_name       = "${local.id}.${data.aws_route53_zone.cloudlabs-aws-no.name}"
+    validation_method = "DNS"
+  }
+  ```
+
+3. Then we'll create the validation records, and `aws_acm_certificate_validation` which doesn't actually create anything but helps requesting DNS validation. See [the documentation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate_validation) for more information.
+
+  ```terraform
+  # The validation records
+  resource "aws_route53_record" "frontend-validation" {
+    provider = aws.ws-dns
+    zone_id  = data.aws_route53_zone.cloudlabs-aws-no.zone_id
+    name     = one(aws_acm_certificate.frontend.domain_validation_options).resource_record_name
+    type     = one(aws_acm_certificate.frontend.domain_validation_options).resource_record_type
+    records  = [one(aws_acm_certificate.frontend.domain_validation_options).resource_record_value]
+    ttl      = 60
+  }
+
+  # Pseudo-resource used to help validation in terraform, see docs
+  resource "aws_acm_certificate_validation" "frontend" {
+    provider                = aws.ws-acm
+    certificate_arn         = aws_acm_certificate.frontend.arn
+    validation_record_fqdns = [aws_route53_record.frontend-validation.fqdn]
+  }
+  ```
+
+4. Go to `https://<yourid42>.cloudlabs-aws.no` and verify that you get a successful response.
+
+
+## Extra tasks
+
+Ask your workshop facilitator!

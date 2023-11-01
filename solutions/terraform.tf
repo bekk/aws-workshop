@@ -29,7 +29,7 @@ provider "aws" {
 provider "aws" {
   alias = "ws-acm"
   # Must correspond to the AWS CLI configured profile name
-  profile             = "cloudlabs-acm"
+  profile             = "cloudlabs"
   region              = "us-east-1"
   allowed_account_ids = ["893160086441"]
 }
