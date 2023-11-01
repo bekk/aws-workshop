@@ -106,12 +106,6 @@ output "s3_url" {
 }
 
 # Create domain name
-data "aws_route53_zone" "cloudlabs-aws-no" {
-  provider = aws.ws-dns
-
-  name = "cloudlabs-aws.no."
-}
-
 resource "aws_route53_record" "frontend" {
   provider = aws.ws-dns
 
