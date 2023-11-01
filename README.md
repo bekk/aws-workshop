@@ -400,7 +400,20 @@ The Route 53 hosted zone for `cloudlabs-aws.no` is managed in a separate account
 
     This will create a new, separate provider configuration that we can refer to using the alias "ws-dns".
 
-4. We'll start by configuring App Runner and create first CNAME record:
+4. Create new file, `dns.tf` and add a `data` block for the hosted DNS zone:
+
+  ```terraform
+  # Get the hosted zone from the admin account
+  data "aws_route53_zone" "cloudlabs-aws-no" {
+    # Note the use of the non-default provider!
+    provider = aws.ws-dns
+
+    name = "cloudlabs-aws.no."
+  }
+  ```
+  
+
+5. Then, let's configure App Runner and create the first CNAME record:
 
   ```terraform
   # Create a new variable for the API URL
@@ -429,6 +442,32 @@ The Route 53 hosted zone for `cloudlabs-aws.no` is managed in a separate account
     zone_id         = data.aws_route53_zone.cloudlabs-aws-no.zone_id
   }
   ```
+
+6. Now, we'll need to create some validation records. We know that that there will be two, so we'll use `count = 2` to iterate over them. You can read more about [count in the documentation](https://developer.hashicorp.com/terraform/language/meta-arguments/count).
+
+  ```terraform
+  # Create local variable to simplify and avoid duplication
+  locals {
+    validation_records = tolist(aws_apprunner_custom_domain_association.todo.certificate_validation_records)
+  }
+
+  resource "aws_route53_record" "backend_validation_records" {
+    // We know there are two records, so using this because for_each with "unknown" number of values gives an error or requires targeted deploy
+    count = 2
+
+    provider        = aws.ws-dns
+    allow_overwrite = true
+    name            = local.validation_records[count.index].name
+    records = [
+      local.validation_records[count.index].value
+    ]
+    ttl     = 60
+    type    = local.validation_records[count.index].type
+    zone_id = data.aws_route53_zone.cloudlabs-aws-no.zone_id
+  }
+  ```
+
+7. Run `terraform apply` and go check out your App Runner instance.
 
 
 

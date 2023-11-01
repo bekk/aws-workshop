@@ -1,3 +1,9 @@
+# Get the hosted zone from the admin account
+data "aws_route53_zone" "cloudlabs-aws-no" {
+  provider = aws.ws-dns
+
+  name = "cloudlabs-aws.no."
+}
 
 # Create a new variable for the API URL
 locals {
@@ -29,6 +35,7 @@ output "validation_records" {
   value = aws_apprunner_custom_domain_association.todo.certificate_validation_records
 }
 
+# Create local variable to simplify and avoid duplication
 locals {
   validation_records = tolist(aws_apprunner_custom_domain_association.todo.certificate_validation_records)
 }
