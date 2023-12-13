@@ -323,7 +323,7 @@ We use a CDN (Cloudfront) in front of the storage account to provide a custom do
         name = "Managed-CachingDisabled"
     }
     
-    resource "aws_cloudfront_distribution" "distribution" {
+    resource "aws_cloudfront_distribution" "frontend" {
         enabled         = true
         is_ipv6_enabled = true
 
