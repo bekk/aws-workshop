@@ -248,7 +248,7 @@ We use a CDN (Cloudfront) in front of the storage account to provide a custom do
     resource "aws_s3_bucket_ownership_controls" "frontend" {
         bucket = aws_s3_bucket.frontend.id
         rule {
-            object_ownership = "ObjectWriter"
+            object_ownership = "BucketOwnerPreferred"
         }
     }
 
