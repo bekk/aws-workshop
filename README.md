@@ -28,7 +28,7 @@ You will receive access to AWS by using your company email address. However, you
 
 3. After setting your new password, go back to [https://bekk-cloudlabs.awsapps.com/start/](https://bekk-cloudlabs.awsapps.com/start/) and log in.
 
-4. You should know get a screen where you can choose between two accounts: "Cloud Labs DNS" and "Cloud Labs Workshop". Select "Cloud Labs Workshop", and click "Management console" to get access to your AWS account in your browser.
+4. You should know get a screen where you can choose between two accounts: "Bekk Cloud Labs admin" and "Cloud Labs WS sandbox". Select "Cloud Labs WS sandbox", and click "Management console" to get access to your AWS account in your browser.
 
 ### Authenticating in the terminal
 
