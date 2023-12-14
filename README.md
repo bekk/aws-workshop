@@ -534,7 +534,27 @@ Now, we'll do something similar for the frontend. This time, we'll have to creat
   }
   ```
 
-4. Go to `https://<yourid42>.cloudlabs-aws.no` and verify that you get a successful response.
+4. We also need to update our CloudFront configuration to support the custom domain name. First, we'll add our custom domain as an alias, then we'll update with our custom certificate:
+
+    ```terraform
+    resource "aws_cloudfront_distribution" "frontend" {
+        // Other properties ...
+
+        // Add an alias to the custom domain
+        aliases = ["${local.id}.${data.aws_route53_zone.cloudlabs-aws-no.name}"]
+
+        // Modify the viewer_certificate block
+        viewer_certificate {
+          //cloudfront_default_certificate = true // <-- Remove this
+          acm_certificate_arn = aws_acm_certificate_validation.frontend.certificate_arn
+          ssl_support_method  = "sni-only"
+        }
+
+        // Other properties ...
+    }
+    ```
+
+5. Go to `https://<yourid42>.cloudlabs-aws.no` and verify that you get a successful response. The propagation of the certificate can take some time, but you can look at the status if you navigate to the CloudFront resource in the AWS console.
 
 
 ## Extra tasks
